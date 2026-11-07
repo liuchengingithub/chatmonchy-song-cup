@@ -5,10 +5,51 @@ const excludedCollectionNames=[
   'bestmonchy1listening',
   '表情couplingcollection'
 ];
-let tracks=[], pool=[], next=[], history=[], match=0;
+let tracks=[], pool=[], next=[], history=[], match=0, groupChoices=[];
+const totalPicks=23;
 let quarterfinalists=[], rankedTracks=[], rankStep=2, posterBlob=null, posterUrl='';
 const a=document.querySelector('#song-a'),b=document.querySelector('#song-b'),undo=document.querySelector('#undo');
 const status=document.querySelector('#library-status');
+let lastScrollY=window.scrollY, scrollDirectionFrame=false, alignScrollInProgress=false, heroAlignTimer=0, heroTransitioning=false;
+function finishHeroTransition(){
+  setTimeout(()=>{document.body.classList.remove('cup-transitioning');heroTransitioning=false;lastScrollY=window.scrollY},180);
+}
+function expandHero(){
+  clearTimeout(heroAlignTimer);heroAlignTimer=0;
+  if(!document.body.classList.contains('cup-collapsed'))return;
+  heroTransitioning=true;document.body.classList.add('cup-transitioning');document.body.classList.remove('cup-collapsed');
+  setTimeout(()=>{document.body.classList.remove('cup-transitioning');heroTransitioning=false;lastScrollY=window.scrollY},360);
+}
+function alignSectionHeadAfterCollapse(){
+  if(!document.body.classList.contains('cup-collapsed')){document.body.classList.remove('cup-transitioning');heroTransitioning=false;return}
+  const heading=document.querySelector('.section-head'),topbar=document.querySelector('.topbar');
+  const targetY=heading.getBoundingClientRect().top+window.scrollY-topbar.getBoundingClientRect().height-12;
+  alignScrollInProgress=true;document.documentElement.style.scrollBehavior='auto';window.scrollTo(0,Math.max(0,targetY));
+  requestAnimationFrame(()=>{document.documentElement.style.removeProperty('scroll-behavior');lastScrollY=window.scrollY;setTimeout(()=>{alignScrollInProgress=false;finishHeroTransition()},180)});
+}
+function collapseHero(){
+  if(document.body.classList.contains('cup-collapsed'))return;
+  heroTransitioning=true;document.body.classList.add('cup-transitioning','cup-collapsed');
+  clearTimeout(heroAlignTimer);heroAlignTimer=setTimeout(()=>{heroAlignTimer=0;alignSectionHeadAfterCollapse()},360);
+}
+function updateHeroOnScroll(){
+  if(scrollDirectionFrame)return;
+  scrollDirectionFrame=true;
+  requestAnimationFrame(()=>{
+    const currentY=window.scrollY, delta=currentY-lastScrollY;
+    if(heroTransitioning&&document.body.classList.contains('cup-collapsed')&&delta>8&&heroAlignTimer){clearTimeout(heroAlignTimer);heroAlignTimer=0;document.body.classList.remove('cup-transitioning');heroTransitioning=false}
+    if(heroTransitioning||alignScrollInProgress){lastScrollY=currentY;scrollDirectionFrame=false;return}
+    if(currentY<48)expandHero();
+    else if(delta>8){
+      if(!document.body.classList.contains('cup-collapsed'))collapseHero();
+      else if(heroAlignTimer){clearTimeout(heroAlignTimer);heroAlignTimer=0;document.body.classList.remove('cup-transitioning');heroTransitioning=false}
+    }
+    else if(delta<-8)expandHero();
+    lastScrollY=currentY;scrollDirectionFrame=false;
+  });
+}
+window.addEventListener('scroll',updateHeroOnScroll,{passive:true});
+window.addEventListener('hashchange',()=>{if(location.hash==='#cup'||window.scrollY<48)expandHero()});
 
 function shuffle(items){
   const result=[...items];
@@ -75,6 +116,7 @@ function getLibrary(data){
       title,
       romaji:'CHATMONCHY ORIGINAL TRACK',
       album:item.collectionName,
+      year:(item.releaseDate||'').slice(0,4),
       artwork:item.artworkUrl100||item.artworkUrl60||'',
       preview:item.previewUrl||'',
       storeUrl:item.trackViewUrl||item.collectionViewUrl||''
@@ -88,28 +130,44 @@ function render(){
   if(!pool.length)return;
   if(pool.length===8&&!quarterfinalists.length)quarterfinalists=[...pool];
   if(pool.length===1){document.querySelector('#matchup').classList.add('hidden');document.querySelector('.cup-bottom').classList.add('hidden');document.querySelector('.section-head').classList.add('hidden');const winner=document.querySelector('#winner');winner.classList.remove('hidden');document.querySelector('#winner-title').textContent=pool[0].title;document.querySelector('#winner-meta').textContent=`${pool[0].album} · CHATMONCHY`;const backdrop=document.querySelector('#winner-backdrop');if(pool[0].artwork)backdrop.src=pool[0].artwork.replace(/\d+x\d+bb/,'600x600bb').replace(/\d+x\d+-\d+\.jpg$/,'600x600bb.jpg');else backdrop.removeAttribute('src');document.querySelector('#ranking-stage').classList.remove('hidden');document.querySelector('#poster-stage').classList.add('hidden');if(!rankedTracks.length){rankedTracks=[pool[0]];rankStep=2;renderRankOptions()}return}
-  document.querySelector('#matchup').classList.remove('hidden');document.querySelector('.cup-bottom').classList.remove('hidden');document.querySelector('.section-head').classList.remove('hidden');document.querySelector('#winner').classList.add('hidden');document.querySelector('#ranking-stage').classList.add('hidden');document.querySelector('#poster-stage').classList.add('hidden');setStatus('',false);
-  const index=roundIndex(), x=pool[match*2], y=pool[match*2+1];
-  if(!y){next.push(x);finishRound();return}
-  fill(a,x,match*2+1);fill(b,y,match*2+2);
-  document.querySelector('#round-number').textContent=String(index).padStart(2,'0');document.querySelector('#round-total').textContent='05';document.querySelector('#round-title').innerHTML=`${rounds[index-1]} <span>${['一回戦','十六強','準々決勝','準決勝','決勝'][index-1]}</span>`;
-  const done=history.length,pct=Math.min(100,done/31*100);document.querySelector('#progress-count').textContent=`${String(done+1).padStart(2,'0')} / 31`;document.querySelector('#progress-bar').style.width=`${pct}%`;document.querySelector('#remaining').textContent=31-done;undo.disabled=!history.length;
+  const matchup=document.querySelector('#matchup');
+  const firstRound=pool.length===32,index=roundIndex();
+  matchup.classList.remove('hidden');matchup.classList.toggle('first-round-grid',firstRound);
+  matchup.querySelector('.versus').classList.toggle('hidden',firstRound);
+  matchup.querySelectorAll('#song-c,#song-d').forEach(card=>card.classList.toggle('hidden',!firstRound));
+  document.querySelector('.cup-bottom').classList.remove('hidden');document.querySelector('.section-head').classList.remove('hidden');document.querySelector('#winner').classList.add('hidden');document.querySelector('#ranking-stage').classList.add('hidden');document.querySelector('#poster-stage').classList.add('hidden');setStatus('',false);
+  if(firstRound)renderFirstGroup();
+  else {fill(a,pool[match*2],match*2+1);fill(b,pool[match*2+1],match*2+2);a.dataset.poolIndex=String(match*2);b.dataset.poolIndex=String(match*2+1);a.classList.remove('chosen');b.classList.remove('chosen');a.setAttribute('aria-label',`选择歌曲：${pool[match*2].title}`);b.setAttribute('aria-label',`选择歌曲：${pool[match*2+1].title}`)}
+  document.querySelector('#round-number').textContent=String(index).padStart(2,'0');document.querySelector('#round-total').textContent='05';document.querySelector('#round-title').innerHTML=`${rounds[index-1]} <span>${['8组各选2首','十六强','準々決勝','準決勝','決勝'][index-1]}</span>`;
+  document.querySelector('#first-round-actions').classList.toggle('hidden',!firstRound);
+  const done=history.length,pct=Math.min(100,done/totalPicks*100);document.querySelector('#progress-count').textContent=`${String(Math.min(done+1,totalPicks)).padStart(2,'0')} / ${totalPicks}`;document.querySelector('#progress-bar').style.width=`${pct}%`;document.querySelector('#remaining').textContent=totalPicks-done;undo.disabled=!history.length;
 }
+function renderFirstGroup(){
+  const cards=['a','b','c','d'].map(letter=>document.querySelector(`#song-${letter}`));
+  const start=match*4;
+  cards.forEach((card,index)=>{const track=pool[start+index],selected=groupChoices.includes(index);fill(card,track,start+index+1);card.dataset.poolIndex=String(start+index);card.classList.toggle('chosen',selected);card.classList.toggle('alt',index%2===1);card.setAttribute('aria-label',`第 ${index+1} 首：${track.title}${selected?'，已选中':''}`)});
+  document.querySelector('#group-choice-count').textContent=`已选 ${groupChoices.length} / 2 首`;
+  document.querySelector('#confirm-first-group').disabled=groupChoices.length!==2;
+}
+function toggleGroupChoice(index){if(groupChoices.includes(index))groupChoices=groupChoices.filter(item=>item!==index);else if(groupChoices.length<2)groupChoices.push(index);renderFirstGroup()}
+function confirmFirstGroup(){if(pool.length!==32||groupChoices.length!==2)return;history.push({pool:[...pool],next:[...next],match,groupChoices:[]});next.push(...groupChoices.map(index=>pool[match*4+index]));groupChoices=[];match++;if(match===8)finishRound();else render()}
 function fill(element,track,number){
   document.querySelectorAll('audio').forEach(player=>{player.pause();player.currentTime=0});
   const image=element.querySelector('.cover'),audio=element.querySelector('audio'),preview=element.querySelector('.preview'),storeLink=preview.querySelector('.preview-label');
-  element.querySelector('.card-index').textContent=`${String(number).padStart(2,'0')} / 32`;element.querySelector('.album-chip').textContent=track.album;element.querySelector('.song-title').textContent=track.title;element.querySelector('.song-romaji').textContent=track.romaji;
+  element.querySelector('.card-index').textContent=`${String(number).padStart(2,'0')} / 32`;element.querySelector('.album-chip').textContent=track.year?`${track.album} · ${track.year}`:track.album;element.querySelector('.song-title').textContent=track.title;element.querySelector('.song-romaji').textContent=track.romaji;
   image.alt=`${track.album} 专辑封面`;image.removeAttribute('src');if(track.artwork)image.src=track.artwork.replace(/\d+x\d+bb/,'600x600bb').replace(/\d+x\d+-\d+\.jpg$/,'600x600bb.jpg');
   audio.pause();audio.removeAttribute('src');audio.load();preview.classList.remove('unavailable','loading');storeLink.removeAttribute('href');
   if(track.storeUrl){storeLink.href=track.storeUrl;storeLink.textContent='30 SEC PREVIEW · APPLE MUSIC ↗'}
-  if(track.preview){audio.src=track.preview.replace(/^http:/,'https:');audio.load()}else{preview.classList.add('unavailable');storeLink.textContent='Apple Music 暂无试听'}
+  const playButton=preview.querySelector('.preview-toggle');
+  if(track.preview){audio.src=track.preview.replace(/^http:/,'https:');audio.load();playButton.disabled=false;playButton.setAttribute('aria-label',`播放 ${track.title} 的30秒试听`)}else{preview.classList.add('unavailable');storeLink.textContent='Apple Music 暂无试听';playButton.disabled=true;playButton.setAttribute('aria-label','暂无试听')}
 }
 function choose(winner){
-  if(!pool.length)return;
-  history.push({pool:[...pool],next:[...next],match});next.push(winner);match++;
+  if(!pool.length||pool.length===32)return;
+  history.push({pool:[...pool],next:[...next],match,groupChoices:[...groupChoices]});next.push(winner);match++;
   if(match>=Math.floor(pool.length/2))finishRound();else render();
 }
 function finishRound(){
+  groupChoices=[];
   if(pool.length===2){pool=[...next];next=[];match=0;render();return}
   if(pool.length%2)next.push(pool[pool.length-1]);pool=[...next];next=[];match=0;render();
 }
@@ -194,7 +252,8 @@ async function sharePoster(){
 function reset(){
   quarterfinalists=[];rankedTracks=[];rankStep=2;posterBlob=null;if(posterUrl){URL.revokeObjectURL(posterUrl);posterUrl=''}
   document.querySelector('#ranking-stage').classList.add('hidden');document.querySelector('#poster-stage').classList.add('hidden');
-  pool=buildBracket(sampleTracks());next=[];match=0;history=[];
+  const rankedList=document.querySelector('#ranked-list');rankedList.replaceChildren();rankedList.classList.add('hidden');
+  pool=buildBracket(sampleTracks());next=[];match=0;groupChoices=[];history=[];
   document.querySelector('#matchup').classList.remove('hidden');document.querySelector('.cup-bottom').classList.remove('hidden');document.querySelector('.section-head').classList.remove('hidden');render();
 }
 async function initialize(){
@@ -203,19 +262,25 @@ async function initialize(){
   const endpoint=`https://itunes.apple.com/lookup?${new URLSearchParams({id:artistId,entity:'song',country:'JP',limit:'200'})}`;
   let usingFallback=false;
   try{
-    try{
-      const data=await appleJsonp(endpoint);tracks=getLibrary(data);
-      if(tracks.length<32)throw new Error('曲库条目不足 32 首');
-    }catch(remoteError){
-      console.warn('Apple Music catalog unavailable; trying bundled catalog.',remoteError);
-      let fallbackData;
-      try{fallbackData=await loadBundledCatalog()}catch(fallbackError){throw new Error('Apple Music 不可访问，且内置曲库无法读取')}
-      tracks=getLibrary(fallbackData);
-      if(tracks.length<32)throw new Error('内置曲库条目不足 32 首');
-      usingFallback=true;
+    if(location.protocol==='file:'){
+      if(!window.chatmonchyCatalogData)throw new Error('内置曲库脚本无法读取');
+      tracks=getLibrary(window.chatmonchyCatalogData);usingFallback=true;
+    }else{
+      try{
+        const data=await appleJsonp(endpoint);tracks=getLibrary(data);
+        if(tracks.length<32)throw new Error('曲库条目不足 32 首');
+      }catch(remoteError){
+        console.warn('Apple Music catalog unavailable; trying bundled catalog.',remoteError);
+        let fallbackData;
+        try{fallbackData=await loadBundledCatalog()}catch(fallbackError){throw new Error('Apple Music 不可访问，且内置曲库无法读取')}
+        tracks=getLibrary(fallbackData);
+        if(tracks.length<32)throw new Error('内置曲库条目不足 32 首');
+        usingFallback=true;
+      }
     }
-    pool=buildBracket(sampleTracks());next=[];match=0;history=[];render();
-    if(usingFallback)setStatus('Apple Music 暂时无法连接，已使用内置曲库；歌曲仍会随机抽取。',true);
+    if(tracks.length<32)throw new Error('内置曲库条目不足 32 首');
+    pool=buildBracket(sampleTracks());next=[];match=0;groupChoices=[];history=[];render();
+    if(usingFallback)setStatus(location.protocol==='file:'?'已使用本地曲库。封面与试听片段从 Apple CDN 加载，请保持网络连接。':'Apple Music 暂时无法连接，已使用内置曲库；歌曲仍会随机抽取。',true);
   }catch(error){
     console.error('Chatmonchy catalog load failed:',error);
     const reason=error.message==='Apple Music 不可访问，且内置曲库无法读取'?'Apple Music 不可访问，内置曲库也无法读取':error.message==='内置曲库条目不足 32 首'?'内置曲库可用曲目不足 32 首':error.message==='Apple lookup timed out'?'Apple Music 请求超时，内置曲库无法读取':error.message==='Apple lookup unavailable'?'无法连接 Apple Music，内置曲库无法读取':'Apple Music 返回的数据无法读取，内置曲库也无法读取';
@@ -223,12 +288,30 @@ async function initialize(){
   }
 }
 
-a.querySelector('.pick').addEventListener('click',()=>choose(pool[match*2]));
-b.querySelector('.pick').addEventListener('click',()=>choose(pool[match*2+1]));
+const matchup=document.querySelector('#matchup');
+matchup.addEventListener('click',event=>{
+  if(event.target.closest('.preview, audio, a, button'))return;
+  const card=event.target.closest('.song-card');if(!card||card.classList.contains('hidden'))return;
+  const index=Number(card.dataset.poolIndex);if(!Number.isInteger(index))return;
+  if(pool.length===32)toggleGroupChoice(index-match*4);else choose(pool[index]);
+});
+matchup.addEventListener('keydown',event=>{
+  if(!['Enter',' '].includes(event.key)||event.target.closest('.preview'))return;
+  const card=event.target.closest('.song-card');if(!card||card.classList.contains('hidden'))return;
+  event.preventDefault();const index=Number(card.dataset.poolIndex);if(!Number.isInteger(index))return;
+  if(pool.length===32)toggleGroupChoice(index-match*4);else choose(pool[index]);
+});
+document.querySelector('#confirm-first-group').addEventListener('click',confirmFirstGroup);
+document.querySelectorAll('.preview-toggle').forEach(button=>{
+  const player=button.closest('.preview').querySelector('audio');
+  button.addEventListener('click',event=>{event.stopPropagation();if(player.paused)player.play().catch(()=>{button.setAttribute('aria-label','试听无法播放')});else player.pause()});
+  player.addEventListener('play',()=>{button.classList.add('playing');button.setAttribute('aria-label','暂停试听')});
+  player.addEventListener('pause',()=>{button.classList.remove('playing');button.setAttribute('aria-label',button.disabled?'暂无试听':'播放30秒试听')});
+});
 document.querySelectorAll('audio').forEach(player=>{
   player.addEventListener('play',()=>document.querySelectorAll('audio').forEach(other=>{if(other!==player)other.pause()}));
   player.addEventListener('timeupdate',()=>{if(player.currentTime>=30){player.pause();player.currentTime=0}});
 });
-undo.addEventListener('click',()=>{const state=history.pop();if(state){pool=state.pool;next=state.next;match=state.match;render()}});
+undo.addEventListener('click',()=>{const state=history.pop();if(state){pool=state.pool;next=state.next;match=state.match;groupChoices=state.groupChoices||[];render()}});
 document.querySelector('#restart').addEventListener('click',reset);document.querySelector('#restart-poster').addEventListener('click',reset);document.querySelector('#share-poster').addEventListener('click',sharePoster);
 initialize();

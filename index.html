@@ -5,7 +5,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta name="theme-color" content="#f4f0e7" />
-  <title>CHATMONCHY SONG CUP — 今日最喜欢哪一首？</title>
+  <title>CHATMONCHY SONG CUP</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link
@@ -19,7 +19,7 @@
   <div class="grain"></div>
   <header class="topbar">
     <a class="wordmark" href="#top" aria-label="Chatmonchy Song Cup home"><span
-        class="mark" aria-hidden="true"></span><span>CHATMONCHY<br><small>FAN ARCHIVE / TOKUSHIMA</small></span></a>
+        class="mark" aria-hidden="true"></span><span>CHATMONCHY<br><small>FAN ARCHIVE</small></span></a>
     <nav><a class="active" href="#cup">SONG CUP</a><a href="#about">ABOUT</a><a
         href="https://www.sonymusic.co.jp/artist/chatmonchy/" target="_blank" rel="noreferrer">OFFICIAL ↗</a></nav>
     <span class="edition">NO. 01 — 2026</span>
@@ -49,23 +49,30 @@
       </div>
       <p class="library-status" id="library-status" role="status" aria-live="polite"></p>
       <div class="matchup" id="matchup" aria-live="polite">
-        <article class="song-card" id="song-a"><span class="card-index">A / 01</span><img class="cover" alt="专辑封面" />
-          <div class="song-details"><span class="album-chip">chatmonchy has come</span><span
-              class="song-title">ハナノユメ</span><span class="song-romaji">HANA NO YUME</span><button class="pick"
-              type="button">この曲にする <b>↗</b></button></div>
-          <div class="preview"><a class="preview-label" target="_blank" rel="noreferrer">30 SEC PREVIEW · APPLE MUSIC
-              ↗</a><audio controls preload="none" aria-label="试听歌曲片段"></audio></div>
+        <article class="song-card" id="song-a" tabindex="0" aria-label="选择歌曲">
+          <span class="card-index">A / 01</span><img class="cover" alt="专辑封面" />
+          <div class="song-details"><span class="album-chip">chatmonchy has come</span><span class="song-title">ハナノユメ</span><span class="song-romaji">HANA NO YUME</span></div>
+          <div class="preview"><a class="preview-label" target="_blank" rel="noreferrer">在 Apple Music 中打开</a><button class="preview-toggle" type="button" aria-label="播放30秒试听"><span aria-hidden="true"></span></button><audio preload="none" aria-label="试听歌曲片段"></audio></div>
+        </article>
+        <article class="song-card alt" id="song-b" tabindex="0" aria-label="选择歌曲">
+          <span class="card-index">B / 02</span><img class="cover" alt="专辑封面" />
+          <div class="song-details"><span class="album-chip">生命力</span><span class="song-title">シャングリラ</span><span class="song-romaji">SHANGRI-LA</span></div>
+          <div class="preview"><a class="preview-label" target="_blank" rel="noreferrer">在 Apple Music 中打开</a><button class="preview-toggle" type="button" aria-label="播放30秒试听"><span aria-hidden="true"></span></button><audio preload="none" aria-label="试听歌曲片段"></audio></div>
+        </article>
+        <article class="song-card" id="song-c" tabindex="0" aria-label="选择歌曲">
+          <span class="card-index">C / 03</span><img class="cover" alt="专辑封面" />
+          <div class="song-details"><span class="album-chip">chatmonchy has come</span><span class="song-title">ハナノユメ</span><span class="song-romaji">HANA NO YUME</span></div>
+          <div class="preview"><a class="preview-label" target="_blank" rel="noreferrer">在 Apple Music 中打开</a><button class="preview-toggle" type="button" aria-label="播放30秒试听"><span aria-hidden="true"></span></button><audio preload="none" aria-label="试听歌曲片段"></audio></div>
+        </article>
+        <article class="song-card alt" id="song-d" tabindex="0" aria-label="选择歌曲">
+          <span class="card-index">D / 04</span><img class="cover" alt="专辑封面" />
+          <div class="song-details"><span class="album-chip">生命力</span><span class="song-title">シャングリラ</span><span class="song-romaji">SHANGRI-LA</span></div>
+          <div class="preview"><a class="preview-label" target="_blank" rel="noreferrer">在 Apple Music 中打开</a><button class="preview-toggle" type="button" aria-label="播放30秒试听"><span aria-hidden="true"></span></button><audio preload="none" aria-label="试听歌曲片段"></audio></div>
         </article>
         <div class="versus"><span>OR</span><i>VS</i><span>どちらが好き？</span></div>
-        <article class="song-card alt" id="song-b"><span class="card-index">B / 02</span><img class="cover"
-            alt="专辑封面" />
-          <div class="song-details"><span class="album-chip">生命力</span><span class="song-title">シャングリラ</span><span
-              class="song-romaji">SHANGRI-LA</span><button class="pick" type="button">この曲にする <b>↗</b></button></div>
-          <div class="preview"><a class="preview-label" target="_blank" rel="noreferrer">30 SEC PREVIEW · APPLE MUSIC
-              ↗</a><audio controls preload="none" aria-label="试听歌曲片段"></audio></div>
-        </article>
       </div>
-      <div class="cup-bottom"><span><b id="remaining">31</b> PICKS LEFT</span><button id="undo" class="text-button"
+      <div id="first-round-actions" class="first-round-actions hidden"><span id="group-choice-count">已选 0 / 2 首</span><button id="confirm-first-group" class="outline-button" type="button" disabled>确认本组晋级曲目 →</button></div>
+      <div class="cup-bottom"><span><b id="remaining">23</b> PICKS LEFT</span><button id="undo" class="text-button"
           disabled>↶ UNDO LAST PICK</button><button id="restart" class="text-button">START OVER ↻</button></div>
       <div class="winner hidden" id="winner"><img class="winner-backdrop" id="winner-backdrop" alt=""
           aria-hidden="true" />
@@ -103,7 +110,7 @@
     <section class="about" id="about">
       <div class="about-label">A LITTLE<br>NOTE FROM<br>THE FAN CLUB</div>
       <div>
-        <h3>一首ずつ、<br>大切に選ぼう。</h3>
+        <h3>一曲ずつ、<br>大切に選ぼう。</h3>
         <p>每次刷新，从 Apple Music 日本目录中随机抽出 32 首有封面和试听的歌曲。<br>指定的精选集、B 面合集和重复发行版本会被排除，同一首歌只算一次。<br>凭直觉选出你心中的冠军，完成你的 Song
           Cup。</p>
       </div>
@@ -112,6 +119,7 @@
   </main>
   <footer><span>UNOFFICIAL FAN PROJECT · MADE WITH ♡</span><span>CHATMONCHY IS FOREVER.</span><span>© 2026 SONG
       CUP</span></footer>
+  <script src="chatmonchy-catalog.js"></script>
   <script src="app.js"></script>
 </body>
 
