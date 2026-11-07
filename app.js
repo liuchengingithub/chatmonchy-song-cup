@@ -1,5 +1,6 @@
 const rounds=['FIRST ROUND','ROUND OF 16','QUARTER FINAL','SEMI FINAL','THE FINAL'];
 const artistId='554929525';
+const isWeChatBrowser=/MicroMessenger/i.test(navigator.userAgent);
 const excludedCollectionNames=[
   'チャットモンチーbest20052011',
   'bestmonchy1listening',
@@ -212,18 +213,25 @@ async function createPoster(){
     ctx.strokeStyle='#c6c0b4';ctx.beginPath();ctx.moveTo(78,y+276);ctx.lineTo(1002,y+276);ctx.stroke();
   }
   ctx.fillStyle='#1c1b19';ctx.font='700 19px "DM Mono", monospace';ctx.fillText('UNOFFICIAL FAN PROJECT  ·  CHATMONCHY IS FOREVER.',80,1824);
-  posterBlob=await new Promise(resolve=>canvas.toBlob(resolve,'image/png'));
+  const posterDataUrl=canvas.toDataURL('image/png');
+  posterBlob=await new Promise(resolve=>{if(canvas.toBlob)canvas.toBlob(blob=>resolve(blob||dataUrlToBlob(posterDataUrl)),'image/png');else resolve(dataUrlToBlob(posterDataUrl))});
   if(!posterBlob)throw new Error('PNG encoding failed');
   if(posterUrl)URL.revokeObjectURL(posterUrl);posterUrl=URL.createObjectURL(posterBlob);
-  document.querySelector('#poster-image').src=posterUrl;document.querySelector('#download-poster').href=posterUrl;document.querySelector('#poster-status').textContent='海报已生成。';
+  document.querySelector('#poster-image').src=isWeChatBrowser?posterDataUrl:posterUrl;document.querySelector('#download-poster').href=posterUrl;document.querySelector('#poster-status').textContent=isWeChatBrowser?'海报已生成。长按海报图片，选择“保存图片”即可保存到相册。':'海报已生成。';
 }
+function dataUrlToBlob(dataUrl){const [header,data]=dataUrl.split(',');const bytes=atob(data);const buffer=new Uint8Array(bytes.length);for(let index=0;index<bytes.length;index++)buffer[index]=bytes.charCodeAt(index);return new Blob([buffer],{type:header.match(/data:(.*?);base64/)[1]})}
 function wrapCanvasText(ctx,text,x,y,maxWidth,lineHeight,maxLines){
   let line='',lineNumber=0;
   for(const character of text){const candidate=line+character;if(ctx.measureText(candidate).width>maxWidth&&line){ctx.fillText(line,x,y+lineNumber*lineHeight);line=character;lineNumber++;if(lineNumber>=maxLines)return} else line=candidate}
   if(line&&lineNumber<maxLines)ctx.fillText(line,x,y+lineNumber*lineHeight);
 }
+function showWeChatPosterHelp(){
+  const message='微信内不能直接下载或调用图片分享。请长按上方海报，选择“保存图片”；保存后可在聊天窗口点“+”→“相册”发送。分享活动页面请使用右上角“…”菜单。';
+  const status=document.querySelector('#poster-status');status.textContent=message;status.scrollIntoView({behavior:'smooth',block:'center'});
+}
 async function sharePoster(){
   const title='我的 Chatmonchy Song Cup TOP 5';
+  if(isWeChatBrowser){showWeChatPosterHelp();return}
   try{
     if(posterBlob&&navigator.share){const file=new File([posterBlob],'chatmonchy-song-cup-top-five.png',{type:'image/png'});if(!navigator.canShare||navigator.canShare({files:[file]})){await navigator.share({title,text:title,files:[file]});return}await navigator.share({title,text:title,url:location.href});return}
     if(navigator.clipboard){await navigator.clipboard.writeText(`${title}\n${location.href}`);document.querySelector('#poster-status').textContent='此设备暂不支持直接分享图片，分享文字和页面链接已复制；也可以保存 PNG 后手动上传。';return}
@@ -297,4 +305,5 @@ document.querySelectorAll('audio').forEach(player=>{
 });
 undo.addEventListener('click',()=>{const state=history.pop();if(state){pool=state.pool;next=state.next;match=state.match;groupChoices=state.groupChoices||[];render()}scrollPageTop()});
 document.querySelector('#restart').addEventListener('click',reset);document.querySelector('#restart-poster').addEventListener('click',reset);document.querySelector('#share-poster').addEventListener('click',sharePoster);
+document.querySelector('#download-poster').addEventListener('click',event=>{if(isWeChatBrowser){event.preventDefault();showWeChatPosterHelp()}});
 initialize();
