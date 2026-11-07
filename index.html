@@ -1,0 +1,118 @@
+<!doctype html>
+<html lang="zh-CN">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#f4f0e7" />
+  <title>CHATMONCHY SONG CUP — 今日最喜欢哪一首？</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link
+    href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Noto+Sans+JP:wght@400;500;700;900&family=Space+Grotesk:wght@400;500;600;700&display=swap"
+    rel="stylesheet">
+  <link rel="stylesheet" href="style.css" />
+  <link rel="stylesheet" href="song-media.css" />
+</head>
+
+<body>
+  <div class="grain"></div>
+  <header class="topbar">
+    <a class="wordmark" href="#top" aria-label="Chatmonchy Song Cup home"><span
+        class="mark" aria-hidden="true"></span><span>CHATMONCHY<br><small>FAN ARCHIVE / TOKUSHIMA</small></span></a>
+    <nav><a class="active" href="#cup">SONG CUP</a><a href="#about">ABOUT</a><a
+        href="https://www.sonymusic.co.jp/artist/chatmonchy/" target="_blank" rel="noreferrer">OFFICIAL ↗</a></nav>
+    <span class="edition">NO. 01 — 2026</span>
+  </header>
+
+  <main id="top">
+    <section class="hero" id="cup">
+      <div class="hero-copy">
+        <div class="eyebrow"><span class="red-dot"></span> THE CHATMONCHY SONG TOURNAMENT</div>
+        <h1>SONG<br><span>CUP</span><sup>!</sup></h1>
+        <p class="intro">如果只能留下其中一首，<br>你会选哪一首？</p>
+        <div class="hero-foot"><span>32 SONGS · 1 WINNER</span><span>あなたの一曲を選んで。</span></div>
+      </div>
+        <div class="side-note">CHOOSE YOUR<br>FAVORITE TRACK →</div>
+    </section>
+
+    <section class="cup-section">
+      <div class="section-head">
+        <div>
+          <div class="eyebrow">ROUND <span id="round-number">01</span> / <span id="round-total">05</span></div>
+          <h2 id="round-title">FIRST ROUND <span>一回戦</span></h2>
+        </div>
+        <div class="progress-wrap">
+          <div class="progress-label"><span>TO THE FINAL</span><span id="progress-count">01 / 31</span></div>
+          <div class="progress-track"><i id="progress-bar"></i></div>
+        </div>
+      </div>
+      <p class="library-status" id="library-status" role="status" aria-live="polite"></p>
+      <div class="matchup" id="matchup" aria-live="polite">
+        <article class="song-card" id="song-a"><span class="card-index">A / 01</span><img class="cover" alt="专辑封面" />
+          <div class="song-details"><span class="album-chip">chatmonchy has come</span><span
+              class="song-title">ハナノユメ</span><span class="song-romaji">HANA NO YUME</span><button class="pick"
+              type="button">この曲にする <b>↗</b></button></div>
+          <div class="preview"><a class="preview-label" target="_blank" rel="noreferrer">30 SEC PREVIEW · APPLE MUSIC
+              ↗</a><audio controls preload="none" aria-label="试听歌曲片段"></audio></div>
+        </article>
+        <div class="versus"><span>OR</span><i>VS</i><span>どちらが好き？</span></div>
+        <article class="song-card alt" id="song-b"><span class="card-index">B / 02</span><img class="cover"
+            alt="专辑封面" />
+          <div class="song-details"><span class="album-chip">生命力</span><span class="song-title">シャングリラ</span><span
+              class="song-romaji">SHANGRI-LA</span><button class="pick" type="button">この曲にする <b>↗</b></button></div>
+          <div class="preview"><a class="preview-label" target="_blank" rel="noreferrer">30 SEC PREVIEW · APPLE MUSIC
+              ↗</a><audio controls preload="none" aria-label="试听歌曲片段"></audio></div>
+        </article>
+      </div>
+      <div class="cup-bottom"><span><b id="remaining">31</b> PICKS LEFT</span><button id="undo" class="text-button"
+          disabled>↶ UNDO LAST PICK</button><button id="restart" class="text-button">START OVER ↻</button></div>
+      <div class="winner hidden" id="winner"><img class="winner-backdrop" id="winner-backdrop" alt=""
+          aria-hidden="true" />
+        <div class="winner-backdrop-shade"></div>
+        <div class="winner-content">
+          <!-- <div class="winner-stamp">CUP<br>WINNER</div> -->
+          <div class="eyebrow">YOUR CHATMONCHY ANTHEM · NO. 1</div>
+          <h2 id="winner-title">—</h2>
+          <p id="winner-meta">—</p>
+        </div>
+      </div>
+      <div class="ranked-list hidden" id="ranked-list"></div>
+      <div class="ranking-stage hidden" id="ranking-stage" aria-live="polite">
+        <div class="ranking-heading">
+          <div class="eyebrow">YOUR TOP FIVE</div>
+          <h2 id="rank-heading">选择第 2 名</h2>
+          <p>冠军已自动列为第 1 名。请从本次八强中依次选出其余名次。</p>
+        </div>
+        <div class="rank-options" id="rank-options"></div>
+      </div>
+      <div class="poster-stage hidden" id="poster-stage" aria-live="polite">
+        <div class="ranking-heading">
+          <div class="eyebrow">YOUR CHATMONCHY TOP FIVE</div>
+          <h2>你的 Song Cup 海报</h2>
+          <p>保存 PNG 图片，或使用设备的分享菜单发送给朋友。</p>
+        </div>
+        <img id="poster-image" alt="Chatmonchy Song Cup 五首歌曲排名海报" />
+        <!-- <p id="poster-status" class="poster-status" role="status"></p> -->
+        <div class="poster-actions"><button class="outline-button" id="share-poster" type="button">分享海报 ↗</button><a
+            class="outline-button download-button" id="download-poster" download="chatmonchy-song-cup-top-five.png">保存
+            PNG ↓</a><button class="text-button" id="restart-poster" type="button">再玩一次 ↻</button></div>
+      </div>
+    </section>
+
+    <section class="about" id="about">
+      <div class="about-label">A LITTLE<br>NOTE FROM<br>THE FAN CLUB</div>
+      <div>
+        <h3>一首ずつ、<br>大切に選ぼう。</h3>
+        <p>每次刷新，从 Apple Music 日本目录中随机抽出 32 首有封面和试听的歌曲。<br>指定的精选集、B 面合集和重复发行版本会被排除，同一首歌只算一次。<br>凭直觉选出你心中的冠军，完成你的 Song
+          Cup。</p>
+      </div>
+      <div class="about-mark">CHAT<br>MONCHY<span>♡</span></div>
+    </section>
+  </main>
+  <footer><span>UNOFFICIAL FAN PROJECT · MADE WITH ♡</span><span>CHATMONCHY IS FOREVER.</span><span>© 2026 SONG
+      CUP</span></footer>
+  <script src="app.js"></script>
+</body>
+
+</html>
