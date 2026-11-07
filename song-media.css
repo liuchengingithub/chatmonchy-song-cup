@@ -939,3 +939,10 @@ body.song-cup-started #cup{display:none}
 .cup-bottom #restart { order: 2 }
 .matchup.first-round-grid ~ .cup-bottom > span,
 .matchup:not(.first-round-grid) ~ .cup-bottom > span { grid-column: 1 / -1 }
+
+
+/* Keep later-round selections free of the hover shadow, and match poster action buttons. */
+.matchup:not(.first-round-grid) .song-card:hover {
+    transform: none;
+    box-shadow: none
+}
