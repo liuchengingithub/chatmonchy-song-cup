@@ -103,8 +103,10 @@ function getLibrary(data){
 }
 function roundIndex(){return Math.min(5,6-Math.ceil(Math.log2(pool.length||1)))}
 function setStatus(message,visible=true){status.textContent=message;status.classList.toggle('hidden',!visible)}
+function stopAllPreviews(){document.querySelectorAll('audio').forEach(player=>player.pause());syncPreviewButtons()}
 function render(){
   if(!pool.length)return;
+  stopAllPreviews();
   if(pool.length===8&&!quarterfinalists.length)quarterfinalists=[...pool];
   if(pool.length===1){document.querySelector('#matchup').classList.add('hidden');document.querySelector('.cup-bottom').classList.add('hidden');document.querySelector('.section-head').classList.add('hidden');const winner=document.querySelector('#winner');winner.classList.remove('hidden');document.querySelector('#winner-title').textContent=pool[0].title;document.querySelector('#winner-meta').textContent=`${pool[0].album} · CHATMONCHY`;const backdrop=document.querySelector('#winner-backdrop');if(pool[0].artwork)backdrop.src=pool[0].artwork.replace(/\d+x\d+bb/,'600x600bb').replace(/\d+x\d+-\d+\.jpg$/,'600x600bb.jpg');else backdrop.removeAttribute('src');document.querySelector('#ranking-stage').classList.remove('hidden');document.querySelector('#poster-stage').classList.add('hidden');if(!rankedTracks.length){rankedTracks=[pool[0]];rankStep=2;renderRankOptions()}return}
   const matchup=document.querySelector('#matchup');
@@ -129,7 +131,7 @@ function renderFirstGroup(){
 function toggleGroupChoice(index){if(groupChoices.includes(index))groupChoices=groupChoices.filter(item=>item!==index);else if(groupChoices.length<2)groupChoices.push(index);renderFirstGroup()}
 function confirmFirstGroup(){if(pool.length!==32||groupChoices.length!==2)return;history.push({pool:[...pool],next:[...next],match,groupChoices:[]});next.push(...groupChoices.map(index=>pool[match*4+index]));groupChoices=[];match++;if(match===8)finishRound();else render()}
 function fill(element,track,number){
-  document.querySelectorAll('audio').forEach(player=>{player.pause();player.currentTime=0});
+  document.querySelectorAll('audio').forEach(player=>{player.pause();player.currentTime=0});syncPreviewButtons();
   const image=element.querySelector('.cover'),audio=element.querySelector('audio'),preview=element.querySelector('.preview'),storeLink=preview.querySelector('.preview-label');
   element.querySelector('.card-index').textContent=`${String(number).padStart(2,'0')} / 32`;element.querySelector('.album-chip').textContent=track.year?`${track.album} · ${track.year}`:track.album;element.querySelector('.song-title').textContent=track.title;element.querySelector('.song-romaji').textContent=track.romaji;
   image.alt=`${track.album} 专辑封面`;image.removeAttribute('src');if(track.artwork)image.src=track.artwork.replace(/\d+x\d+bb/,'600x600bb').replace(/\d+x\d+-\d+\.jpg$/,'600x600bb.jpg');
@@ -185,6 +187,7 @@ function chooseRank(track){
   createPoster().catch(error=>{document.querySelector('#poster-status').textContent='海报生成失败，请刷新页面后重试。';console.error(error)});
 }
 function loadPosterImage(url,local=false){
+  if(typeof url!=='string'||!url)return Promise.resolve(null);
   return new Promise(resolve=>{const image=new Image();if(!local)image.crossOrigin='anonymous';image.onload=()=>resolve(image);image.onerror=()=>resolve(null);image.src=url.replace(/\d+x\d+bb/,'600x600bb').replace(/\d+x\d+-\d+\.jpg$/,'600x600bb.jpg')});
 }
 async function createPoster(){
@@ -281,11 +284,12 @@ matchup.addEventListener('keydown',event=>{
   if(pool.length===32)toggleGroupChoice(index-match*4);else choose(pool[index]);
 });
 document.querySelector('#confirm-first-group').addEventListener('click',confirmFirstGroup);
+function syncPreviewButtons(){document.querySelectorAll('.preview-toggle').forEach(button=>{const player=button.closest('.preview').querySelector('audio'),playing=!player.paused&&!player.ended;button.classList.toggle('playing',playing);button.setAttribute('aria-label',player.disabled?'暂无试听':playing?'暂停试听':'播放30秒试听')})}
 document.querySelectorAll('.preview-toggle').forEach(button=>{
   const player=button.closest('.preview').querySelector('audio');
   button.addEventListener('click',event=>{event.stopPropagation();if(player.paused)player.play().catch(()=>{button.setAttribute('aria-label','试听无法播放')});else player.pause()});
-  player.addEventListener('play',()=>{button.classList.add('playing');button.setAttribute('aria-label','暂停试听')});
-  player.addEventListener('pause',()=>{button.classList.remove('playing');button.setAttribute('aria-label',button.disabled?'暂无试听':'播放30秒试听')});
+  player.addEventListener('play',syncPreviewButtons);
+  player.addEventListener('pause',syncPreviewButtons);
 });
 document.querySelectorAll('audio').forEach(player=>{
   player.addEventListener('play',()=>document.querySelectorAll('audio').forEach(other=>{if(other!==player)other.pause()}));
