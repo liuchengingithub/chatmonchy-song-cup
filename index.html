@@ -31,10 +31,18 @@
         <div class="eyebrow"><span class="red-dot"></span> THE CHATMONCHY SONG TOURNAMENT</div>
         <h1>SONG<br><span>CUP</span><sup>!</sup></h1>
         <p class="intro">从随机抽出的 32 首 CHATMONCHY 歌曲中，选出你心目中的最佳</p>
+        <div class="mode-select">
+          <p>请决定进入淘汰赛的32首歌曲的选取方式：</p>
+          <div class="mode-select-buttons">
+            <button class="mode-choice-button" id="choose-random" type="button" disabled>系统随机选取</button>
+            <button class="mode-choice-button" id="choose-manual" type="button" disabled>从曲库中手动选取</button>
+          </div>
+          <p class="mode-status" id="mode-status" role="status" aria-live="polite">正在载入曲库…</p>
+        </div>
         <div class="hero-foot"><span>32 SONGS · 1 WINNER</span><span>あなたの一曲を選んで。</span></div>
       </div>
       <div class="side-note">CHOOSE YOUR<br>FAVORITE TRACK →</div>
-      <button class="start-cup-prompt" id="start-cup" type="button">↓ 下拉开始</button>
+
     </section>
 
     <section class="cup-section">
@@ -49,6 +57,25 @@
         </div>
       </div>
       <p class="library-status" id="library-status" role="status" aria-live="polite"></p>
+      <div class="manual-picker hidden" id="manual-picker">
+        <div class="manual-heading">
+          <div class="eyebrow">PICK YOUR 32 TRACKS</div>
+          <h2>从曲库中手动选曲</h2>
+          <p>专辑按发行年份排列。选择一张专辑查看曲目，点击歌曲即可加入或移出名单。</p>
+        </div>
+        <div class="manual-layout">
+          <nav class="manual-albums" id="manual-albums" aria-label="按发行年份排列的专辑"></nav>
+          <section class="manual-track-panel" aria-live="polite">
+            <div class="manual-album-heading"><img id="manual-album-art" alt="" /><div><h3 id="manual-album-title"></h3><span id="manual-album-year"></span></div></div>
+            <div class="manual-tracks" id="manual-tracks"></div>
+          </section>
+        </div>
+        <div class="manual-actions">
+          <div class="manual-count" id="manual-count">已选 0 / 32 首</div>
+          <button class="outline-button" id="manual-enter" type="button" disabled>已选 0 / 32</button>
+          <button class="outline-button" id="manual-random" type="button">改为系统随机选取 ↻</button>
+        </div>
+      </div>
       <div class="matchup" id="matchup" aria-live="polite">
         <article class="song-card" id="song-a" tabindex="0" aria-label="选择歌曲">
           <span class="card-index">A / 01</span><img class="cover" alt="专辑封面" />

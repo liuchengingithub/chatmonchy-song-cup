@@ -6,28 +6,12 @@ const excludedCollectionNames=[
   'bestmonchy1listening',
   '表情couplingcollection'
 ];
-let tracks=[], pool=[], next=[], history=[], match=0, groupChoices=[];
+let tracks=[], pool=[], next=[], history=[], match=0, groupChoices=[], manualAlbums=[], manualAlbumCatalog=[], selectedAlbumKey='', manualSelection=new Map();
 const totalPicks=23;
 let quarterfinalists=[], rankedTracks=[], rankStep=2, posterBlob=null, posterUrl='';
 const a=document.querySelector('#song-a'),b=document.querySelector('#song-b'),undo=document.querySelector('#undo');
 const status=document.querySelector('#library-status');
-let songCupStarted=false, startScrollFrame=false;
-function startSongSelection(alignToSection=true){
-  if(songCupStarted)return;
-  songCupStarted=true;document.body.classList.add('song-cup-started');
-  if(!alignToSection)return;
-  const section=document.querySelector('.cup-section'),topbar=document.querySelector('.topbar');
-  const priorBehavior=document.documentElement.style.scrollBehavior;document.documentElement.style.scrollBehavior='auto';
-  const targetY=section.getBoundingClientRect().top+window.scrollY-topbar.getBoundingClientRect().height;
-  window.scrollTo(0,Math.max(0,targetY));
-  requestAnimationFrame(()=>{document.documentElement.style.scrollBehavior=priorBehavior});
-}
-window.addEventListener('scroll',()=>{
-  if(songCupStarted||startScrollFrame||window.scrollY<24)return;
-  startScrollFrame=true;
-  requestAnimationFrame(()=>{startScrollFrame=false;if(!songCupStarted&&window.scrollY>=24)startSongSelection(location.hash!=='#about')});
-},{passive:true});
-document.querySelector('#start-cup').addEventListener('click',()=>startSongSelection(true));
+let songCupStarted=false;
 
 function shuffle(items){
   const result=[...items];
@@ -46,6 +30,81 @@ function buildBracket(selection){
   }
   return bracket;
 }
+
+function getAlbums(){
+  if(manualAlbumCatalog.length){
+    const cached=new Map();tracks.forEach(track=>{if(track.collectionId)cached.set(String(track.collectionId),track)});
+    return manualAlbumCatalog.map(item=>{
+      const id=String(item.collectionId),track=cached.get(id),year=(item.releaseDate||'').slice(0,4);
+      return {key:id,collectionId:id,title:item.collectionName,year:year||'—',sortYear:Number(year)||9999,artwork:item.artworkUrl100||track?.artwork||'',tracks:tracks.filter(song=>String(song.collectionId)===id),loaded:false,loading:false};
+    }).sort((left,right)=>left.sortYear-right.sortYear||left.title.localeCompare(right.title,'ja'));
+  }
+  const groups=new Map();
+  tracks.forEach(track=>{
+    const key=String(track.collectionId||`${track.album}::${track.year||''}`);
+    if(!groups.has(key))groups.set(key,{key,collectionId:track.collectionId||null,title:track.album,year:track.year||'—',sortYear:Number(track.year)||9999,artwork:track.artwork,tracks:[],loaded:false,loading:false});
+    groups.get(key).tracks.push(track);
+  });
+  return [...groups.values()].map(album=>({...album,tracks:album.tracks.sort((left,right)=>left.discNumber-right.discNumber||left.trackNumber-right.trackNumber),loaded:!album.collectionId})).sort((left,right)=>left.sortYear-right.sortYear||left.title.localeCompare(right.title,'ja'));
+}
+function renderManualAlbums(){
+  const list=document.querySelector('#manual-albums');list.replaceChildren();
+  manualAlbums.forEach(album=>{
+    const button=document.createElement('button');button.type='button';button.className='manual-album-option';button.classList.toggle('active',album.key===selectedAlbumKey);button.setAttribute('aria-pressed',String(album.key===selectedAlbumKey));button.dataset.albumKey=album.key;
+    const image=document.createElement('img');image.alt='';if(album.artwork)image.src=album.artwork.replace(/\d+x\d+bb/,'300x300bb').replace(/\d+x\d+-\d+\.jpg$/,'300x300bb.jpg');
+    const details=document.createElement('span');details.className='manual-album-meta';const title=document.createElement('strong');title.textContent=album.title;const year=document.createElement('small');year.textContent=album.year;details.append(title,year);button.append(image,details);
+    button.addEventListener('click',()=>{selectedAlbumKey=album.key;list.querySelectorAll('.manual-album-option').forEach(option=>{const active=option.dataset.albumKey===selectedAlbumKey;option.classList.toggle('active',active);option.setAttribute('aria-pressed',String(active))});renderManualTracks();loadManualAlbumTracks(album).catch(error=>{console.warn('Could not load full album track list.',error);if(selectedAlbumKey===album.key)renderManualTracks('该专辑完整曲目暂时无法载入，当前显示已缓存的曲目。')})});list.append(button);
+  });
+}
+async function loadManualAlbumTracks(album){
+  if(album.loaded||!album.collectionId)return;
+  album.loading=true;if(selectedAlbumKey===album.key)renderManualTracks('正在载入完整曲目…');
+  try{
+    const endpoint=`https://itunes.apple.com/lookup?${new URLSearchParams({id:String(album.collectionId),entity:'song',country:'JP',limit:'200'})}`;
+    const data=await appleJsonp(endpoint), fetched=getLibrary({results:data.results||[]},{requireMedia:false,deduplicate:false}).filter(track=>String(track.collectionId)===String(album.collectionId));
+    if(!fetched.length)throw new Error('该专辑没有可读取的曲目');
+    const byId=new Map(album.tracks.map(track=>[String(track.id),track]));
+    fetched.forEach(track=>byId.set(String(track.id),track));
+    album.tracks=[...byId.values()].sort((left,right)=>left.discNumber-right.discNumber||left.trackNumber-right.trackNumber);
+    album.loaded=true;
+  }finally{album.loading=false;if(selectedAlbumKey===album.key)renderManualTracks()}
+}
+function renderManualTracks(message=''){
+  const album=manualAlbums.find(item=>item.key===selectedAlbumKey);if(!album)return;
+  const image=document.querySelector('#manual-album-art');image.alt=`${album.title} 专辑封面`;image.removeAttribute('src');if(album.artwork)image.src=album.artwork.replace(/\d+x\d+bb/,'300x300bb').replace(/\d+x\d+-\d+\.jpg$/,'300x300bb.jpg');
+  document.querySelector('#manual-album-title').textContent=album.title;document.querySelector('#manual-album-year').textContent=album.year;
+  const list=document.querySelector('#manual-tracks');list.replaceChildren();
+  if(message){const statusMessage=document.createElement('p');statusMessage.className='manual-track-status';statusMessage.textContent=message;list.append(statusMessage)}
+  album.tracks.forEach(track=>{
+    const chosen=manualSelection.has(String(track.id)),button=document.createElement('button');button.type='button';button.className='manual-track';button.classList.toggle('selected',chosen);button.setAttribute('aria-pressed',String(chosen));
+    const details=document.createElement('span');details.className='manual-track-meta';const title=document.createElement('strong');title.textContent=track.title;details.append(title);
+    const mark=document.createElement('span');mark.className='manual-track-check';mark.setAttribute('aria-hidden','true');mark.textContent=chosen?'✓':'';button.append(details,mark);
+    button.addEventListener('click',()=>{const key=String(track.id);if(manualSelection.has(key))manualSelection.delete(key);else if(manualSelection.size<32)manualSelection.set(key,track);updateManualCount();renderManualTracks()});list.append(button);
+  });
+  updateManualCount();
+}
+function updateManualCount(){
+  const count=manualSelection.size;document.querySelector('#manual-count').textContent=`已选 ${count} / 32 首`;
+  const button=document.querySelector('#manual-enter');button.disabled=count!==32;button.textContent=count===32?'进入淘汰赛 →':`已选 ${count} / 32`;
+}
+function enterStartedView(manual=false){
+  songCupStarted=true;document.body.classList.add('song-cup-started');document.body.classList.toggle('manual-selection',manual);
+  const section=document.querySelector('.cup-section'),topbar=document.querySelector('.topbar');
+  const oldBehavior=document.documentElement.style.scrollBehavior;document.documentElement.style.scrollBehavior='auto';
+  window.scrollTo(0,Math.max(0,section.getBoundingClientRect().top+window.scrollY-topbar.getBoundingClientRect().height));
+  requestAnimationFrame(()=>{document.documentElement.style.scrollBehavior=oldBehavior});
+}
+function showManualPicker(){
+  if(tracks.length<32)return;manualSelection.clear();manualAlbums=getAlbums();selectedAlbumKey=manualAlbums[0]?.key||'';
+  document.querySelector('#manual-picker').classList.remove('hidden');enterStartedView(true);renderManualAlbums();renderManualTracks();
+}
+function startTournament(selection){
+  if(selection.length!==32)return;document.querySelector('#manual-picker').classList.add('hidden');
+  enterStartedView(false);pool=buildBracket(selection);next=[];match=0;groupChoices=[];history=[];quarterfinalists=[];rankedTracks=[];rankStep=2;
+  document.querySelector('#matchup').classList.remove('hidden');document.querySelector('.cup-bottom').classList.remove('hidden');document.querySelector('.section-head').classList.remove('hidden');render();
+}
+function startRandomTournament(){if(tracks.length>=32)startTournament(sampleTracks())}
+
 function appleJsonp(url){
   return new Promise((resolve,reject)=>{
     const callback=`songCupApple${Date.now()}${Math.random().toString(36).slice(2)}`;
@@ -78,29 +137,35 @@ function isExcludedCollection(name){
   const normalized=normalize(name);
   return excludedCollectionNames.some(excluded=>normalized.includes(excluded))||normalized.includes('foreveredition');
 }
-function getLibrary(data){
+function getLibrary(data,{requireMedia=true,deduplicate=true}={}){
   const seen=new Set(), library=[];
   for(const item of data.results||[]){
-    if(item.wrapperType!=='track'||String(item.artistId)!==artistId||!item.trackName||!item.collectionName||!item.previewUrl||!item.artworkUrl100)continue;
+    if(item.wrapperType!=='track'||String(item.artistId)!==artistId||!item.trackName||!item.collectionName||(requireMedia&&(!item.previewUrl||!item.artworkUrl100)))continue;
     if(!['チャットモンチー','chatmonchy'].includes(normalize(item.artistName)))continue;
     if(isExcludedCollection(item.collectionName))continue;
     const title=getCanonicalTitle(item.trackName);
     if(!title)continue;
     const key=normalize(title);
-    if(!key||seen.has(key))continue;
+    if(!key||(deduplicate&&seen.has(key)))continue;
     seen.add(key);
     library.push({
       id:item.trackId,
+      collectionId:item.collectionId||null,
       title,
       romaji:'CHATMONCHY ORIGINAL TRACK',
       album:item.collectionName,
       year:(item.releaseDate||'').slice(0,4),
+      discNumber:item.discNumber||1,
+      trackNumber:item.trackNumber||0,
       artwork:item.artworkUrl100||item.artworkUrl60||'',
       preview:item.previewUrl||'',
       storeUrl:item.trackViewUrl||item.collectionViewUrl||''
     });
   }
   return library;
+}
+function getAlbumCatalog(data){
+  return (data.results||[]).filter(item=>item.wrapperType==='collection'&&item.collectionId&&item.collectionName&&String(item.artistId)===artistId&&isExcludedCollection(item.collectionName)===false&&['チャットモンチー','chatmonchy'].includes(normalize(item.artistName))).map(item=>({collectionId:item.collectionId,collectionName:item.collectionName,releaseDate:item.releaseDate||'',artworkUrl100:item.artworkUrl100||''}));
 }
 function roundIndex(){return Math.min(5,6-Math.ceil(Math.log2(pool.length||1)))}
 function setStatus(message,visible=true){status.textContent=message;status.classList.toggle('hidden',!visible)}
@@ -240,15 +305,16 @@ async function sharePoster(){
 }
 function scrollPageTop(){const root=document.documentElement,previous=root.style.scrollBehavior;root.style.scrollBehavior='auto';window.scrollTo(0,0);requestAnimationFrame(()=>{root.style.scrollBehavior=previous})}
 function reset(){
-  quarterfinalists=[];rankedTracks=[];rankStep=2;posterBlob=null;if(posterUrl){URL.revokeObjectURL(posterUrl);posterUrl=''}
+  quarterfinalists=[];rankedTracks=[];rankStep=2;posterBlob=null;manualSelection.clear();selectedAlbumKey='';manualAlbums=[];
+  if(posterUrl){URL.revokeObjectURL(posterUrl);posterUrl=''}
   document.querySelector('#ranking-stage').classList.add('hidden');document.querySelector('#poster-stage').classList.add('hidden');
+  document.querySelector('#manual-picker').classList.add('hidden');document.querySelector('#matchup').classList.add('hidden');document.querySelector('.cup-bottom').classList.add('hidden');document.querySelector('.section-head').classList.add('hidden');document.querySelector('#first-round-actions').classList.add('hidden');document.querySelector('#winner').classList.add('hidden');
   const rankedList=document.querySelector('#ranked-list');rankedList.replaceChildren();rankedList.classList.add('hidden');
-  pool=buildBracket(sampleTracks());next=[];match=0;groupChoices=[];history=[];
-  document.querySelector('#matchup').classList.remove('hidden');document.querySelector('.cup-bottom').classList.remove('hidden');document.querySelector('.section-head').classList.remove('hidden');render();scrollPageTop();
+  pool=[];next=[];match=0;groupChoices=[];history=[];songCupStarted=false;document.body.classList.remove('song-cup-started','manual-selection');scrollPageTop();
 }
 async function initialize(){
-  setStatus('正在载入 Chatmonchy 曲库…');
-  document.querySelector('#matchup').classList.add('hidden');document.querySelector('.cup-bottom').classList.add('hidden');
+  const modeStatus=document.querySelector('#mode-status');modeStatus.textContent='正在载入 Chatmonchy 曲库…';
+  document.querySelector('#choose-random').disabled=true;document.querySelector('#choose-manual').disabled=true;
   const endpoint=`https://itunes.apple.com/lookup?${new URLSearchParams({id:artistId,entity:'song',country:'JP',limit:'200'})}`;
   let usingFallback=false;
   try{
@@ -256,25 +322,16 @@ async function initialize(){
       if(!window.chatmonchyCatalogData)throw new Error('内置曲库脚本无法读取');
       tracks=getLibrary(window.chatmonchyCatalogData);usingFallback=true;
     }else{
-      try{
-        const data=await appleJsonp(endpoint);tracks=getLibrary(data);
-        if(tracks.length<32)throw new Error('曲库条目不足 32 首');
-      }catch(remoteError){
-        console.warn('Apple Music catalog unavailable; trying bundled catalog.',remoteError);
-        let fallbackData;
-        try{fallbackData=await loadBundledCatalog()}catch(fallbackError){throw new Error('Apple Music 不可访问，且内置曲库无法读取')}
-        tracks=getLibrary(fallbackData);
-        if(tracks.length<32)throw new Error('内置曲库条目不足 32 首');
-        usingFallback=true;
-      }
+      try{const data=await appleJsonp(endpoint);tracks=getLibrary(data);if(tracks.length<32)throw new Error('曲库条目不足 32 首');try{const albums=await appleJsonp(`https://itunes.apple.com/lookup?${new URLSearchParams({id:artistId,entity:'album',country:'JP',limit:'200'})}`);manualAlbumCatalog=getAlbumCatalog(albums)}catch(albumError){console.warn('Apple album list unavailable; using album records from the track catalog.',albumError)}}
+      catch(remoteError){console.warn('Apple Music catalog unavailable; trying bundled catalog.',remoteError);let fallbackData;try{fallbackData=await loadBundledCatalog()}catch(fallbackError){throw new Error('Apple Music 不可访问，且内置曲库无法读取')}tracks=getLibrary(fallbackData);if(tracks.length<32)throw new Error('内置曲库条目不足 32 首');usingFallback=true}
     }
     if(tracks.length<32)throw new Error('内置曲库条目不足 32 首');
-    pool=buildBracket(sampleTracks());next=[];match=0;groupChoices=[];history=[];render();
-    if(usingFallback)setStatus(location.protocol==='file:'?'已使用本地曲库。封面与试听片段从 Apple CDN 加载，请保持网络连接。':'Apple Music 暂时无法连接，已使用内置曲库；歌曲仍会随机抽取。',true);
+    document.querySelector('#choose-random').disabled=false;document.querySelector('#choose-manual').disabled=false;
+    modeStatus.textContent=usingFallback?'Apple Music 暂时无法连接，已载入内置曲库；封面和试听仍从 Apple CDN 加载。':'曲库已载入。';
   }catch(error){
     console.error('Chatmonchy catalog load failed:',error);
-    const reason=error.message==='Apple Music 不可访问，且内置曲库无法读取'?'Apple Music 不可访问，内置曲库也无法读取':error.message==='内置曲库条目不足 32 首'?'内置曲库可用曲目不足 32 首':error.message==='Apple lookup timed out'?'Apple Music 请求超时，内置曲库无法读取':error.message==='Apple lookup unavailable'?'无法连接 Apple Music，内置曲库无法读取':'Apple Music 返回的数据无法读取，内置曲库也无法读取';
-    setStatus(`曲库载入失败：${reason}。请确认 chatmonchy-catalog.js 与页面文件位于同一目录。`);
+    const reason=error.message==='Apple Music 不可访问，且内置曲库无法读取'?'Apple Music 与内置曲库均无法读取':error.message==='内置曲库条目不足 32 首'?'曲库可用曲目不足 32 首':error.message==='Apple lookup timed out'?'Apple Music 请求超时，内置曲库无法读取':error.message==='Apple lookup unavailable'?'无法连接 Apple Music，内置曲库无法读取':'Apple Music 返回的数据无法读取，内置曲库也无法读取';
+    modeStatus.textContent=`曲库载入失败：${reason}。请联网后刷新页面。`;
   }
 }
 
@@ -306,4 +363,8 @@ document.querySelectorAll('audio').forEach(player=>{
 undo.addEventListener('click',()=>{const state=history.pop();if(state){pool=state.pool;next=state.next;match=state.match;groupChoices=state.groupChoices||[];render()}scrollPageTop()});
 document.querySelector('#restart').addEventListener('click',reset);document.querySelector('#restart-poster').addEventListener('click',reset);document.querySelector('#share-poster').addEventListener('click',sharePoster);
 document.querySelector('#download-poster').addEventListener('click',event=>{if(isWeChatBrowser){event.preventDefault();showWeChatPosterHelp()}});
+document.querySelector('#choose-random').addEventListener('click',startRandomTournament);
+document.querySelector('#choose-manual').addEventListener('click',showManualPicker);
+document.querySelector('#manual-enter').addEventListener('click',()=>{if(manualSelection.size===32)startTournament([...manualSelection.values()])});
+document.querySelector('#manual-random').addEventListener('click',startRandomTournament);
 initialize();
