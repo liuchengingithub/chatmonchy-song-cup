@@ -10,46 +10,23 @@ const totalPicks=23;
 let quarterfinalists=[], rankedTracks=[], rankStep=2, posterBlob=null, posterUrl='';
 const a=document.querySelector('#song-a'),b=document.querySelector('#song-b'),undo=document.querySelector('#undo');
 const status=document.querySelector('#library-status');
-let lastScrollY=window.scrollY, scrollDirectionFrame=false, alignScrollInProgress=false, heroAlignTimer=0, heroTransitioning=false;
-function finishHeroTransition(){
-  setTimeout(()=>{document.body.classList.remove('cup-transitioning');heroTransitioning=false;lastScrollY=window.scrollY},180);
+let songCupStarted=false, startScrollFrame=false;
+function startSongSelection(alignToSection=true){
+  if(songCupStarted)return;
+  songCupStarted=true;document.body.classList.add('song-cup-started');
+  if(!alignToSection)return;
+  const section=document.querySelector('.cup-section'),topbar=document.querySelector('.topbar');
+  const priorBehavior=document.documentElement.style.scrollBehavior;document.documentElement.style.scrollBehavior='auto';
+  const targetY=section.getBoundingClientRect().top+window.scrollY-topbar.getBoundingClientRect().height;
+  window.scrollTo(0,Math.max(0,targetY));
+  requestAnimationFrame(()=>{document.documentElement.style.scrollBehavior=priorBehavior});
 }
-function expandHero(){
-  clearTimeout(heroAlignTimer);heroAlignTimer=0;
-  if(!document.body.classList.contains('cup-collapsed'))return;
-  heroTransitioning=true;document.body.classList.add('cup-transitioning');document.body.classList.remove('cup-collapsed');
-  setTimeout(()=>{document.body.classList.remove('cup-transitioning');heroTransitioning=false;lastScrollY=window.scrollY},360);
-}
-function alignSectionHeadAfterCollapse(){
-  if(!document.body.classList.contains('cup-collapsed')){document.body.classList.remove('cup-transitioning');heroTransitioning=false;return}
-  const heading=document.querySelector('.section-head'),topbar=document.querySelector('.topbar');
-  const targetY=heading.getBoundingClientRect().top+window.scrollY-topbar.getBoundingClientRect().height-12;
-  alignScrollInProgress=true;document.documentElement.style.scrollBehavior='auto';window.scrollTo(0,Math.max(0,targetY));
-  requestAnimationFrame(()=>{document.documentElement.style.removeProperty('scroll-behavior');lastScrollY=window.scrollY;setTimeout(()=>{alignScrollInProgress=false;finishHeroTransition()},180)});
-}
-function collapseHero(){
-  if(document.body.classList.contains('cup-collapsed'))return;
-  heroTransitioning=true;document.body.classList.add('cup-transitioning','cup-collapsed');
-  clearTimeout(heroAlignTimer);heroAlignTimer=setTimeout(()=>{heroAlignTimer=0;alignSectionHeadAfterCollapse()},360);
-}
-function updateHeroOnScroll(){
-  if(scrollDirectionFrame)return;
-  scrollDirectionFrame=true;
-  requestAnimationFrame(()=>{
-    const currentY=window.scrollY, delta=currentY-lastScrollY;
-    if(heroTransitioning&&document.body.classList.contains('cup-collapsed')&&delta>8&&heroAlignTimer){clearTimeout(heroAlignTimer);heroAlignTimer=0;document.body.classList.remove('cup-transitioning');heroTransitioning=false}
-    if(heroTransitioning||alignScrollInProgress){lastScrollY=currentY;scrollDirectionFrame=false;return}
-    if(currentY<48)expandHero();
-    else if(delta>8){
-      if(!document.body.classList.contains('cup-collapsed'))collapseHero();
-      else if(heroAlignTimer){clearTimeout(heroAlignTimer);heroAlignTimer=0;document.body.classList.remove('cup-transitioning');heroTransitioning=false}
-    }
-    else if(delta<-8)expandHero();
-    lastScrollY=currentY;scrollDirectionFrame=false;
-  });
-}
-window.addEventListener('scroll',updateHeroOnScroll,{passive:true});
-window.addEventListener('hashchange',()=>{if(location.hash==='#cup'||window.scrollY<48)expandHero()});
+window.addEventListener('scroll',()=>{
+  if(songCupStarted||startScrollFrame||window.scrollY<24)return;
+  startScrollFrame=true;
+  requestAnimationFrame(()=>{startScrollFrame=false;if(!songCupStarted&&window.scrollY>=24)startSongSelection(location.hash!=='#about')});
+},{passive:true});
+document.querySelector('#start-cup').addEventListener('click',()=>startSongSelection(true));
 
 function shuffle(items){
   const result=[...items];
@@ -207,12 +184,14 @@ function chooseRank(track){
   document.querySelector('#ranking-stage').classList.add('hidden');document.querySelector('#poster-stage').classList.remove('hidden');
   createPoster().catch(error=>{document.querySelector('#poster-status').textContent='海报生成失败，请刷新页面后重试。';console.error(error)});
 }
-function loadPosterImage(url){
-  return new Promise(resolve=>{const image=new Image();image.crossOrigin='anonymous';image.onload=()=>resolve(image);image.onerror=()=>resolve(null);image.src=url.replace(/\d+x\d+bb/,'600x600bb').replace(/\d+x\d+-\d+\.jpg$/,'600x600bb.jpg')});
+function loadPosterImage(url,local=false){
+  return new Promise(resolve=>{const image=new Image();if(!local)image.crossOrigin='anonymous';image.onload=()=>resolve(image);image.onerror=()=>resolve(null);image.src=url.replace(/\d+x\d+bb/,'600x600bb').replace(/\d+x\d+-\d+\.jpg$/,'600x600bb.jpg')});
 }
 async function createPoster(){
   const canvas=document.createElement('canvas');canvas.width=1080;canvas.height=1920;const ctx=canvas.getContext('2d');
   ctx.fillStyle='#f4f0e7';ctx.fillRect(0,0,1080,1920);ctx.fillStyle='#ed442f';ctx.fillRect(0,0,1080,22);
+  const bandPhoto=await loadPosterImage(window.chatmonchyPosterPhoto,true);
+  if(bandPhoto){const size=176,cx=914,cy=166,scale=Math.max(size/bandPhoto.width,size/bandPhoto.height),sw=size/scale,sh=size/scale,sx=(bandPhoto.width-sw)/2,sy=(bandPhoto.height-sh)/2;ctx.save();ctx.beginPath();ctx.arc(cx,cy,size/2,0,Math.PI*2);ctx.clip();ctx.drawImage(bandPhoto,sx,sy,sw,sh,cx-size/2,cy-size/2,size,size);ctx.restore()}
   ctx.fillStyle='#1c1b19';ctx.font='700 34px "DM Mono", monospace';ctx.fillText('CHATMONCHY  /  SONG CUP',78,102);
   ctx.fillStyle='#ed442f';ctx.font='900 82px "Noto Sans JP", sans-serif';ctx.fillText('MY TOP FIVE',76,208);
   ctx.fillStyle='#77736a';ctx.font='22px "DM Mono", monospace';ctx.fillText('あなたが選んだ、5つの大切な曲。',80,254);
@@ -230,7 +209,6 @@ async function createPoster(){
     ctx.strokeStyle='#c6c0b4';ctx.beginPath();ctx.moveTo(78,y+276);ctx.lineTo(1002,y+276);ctx.stroke();
   }
   ctx.fillStyle='#1c1b19';ctx.font='700 19px "DM Mono", monospace';ctx.fillText('UNOFFICIAL FAN PROJECT  ·  CHATMONCHY IS FOREVER.',80,1824);
-  ctx.fillStyle='#ed442f';ctx.beginPath();ctx.arc(958,1817,23,0,Math.PI*2);ctx.fill();ctx.fillStyle='#fff';ctx.font='700 22px sans-serif';ctx.fillText('C',950,1825);
   posterBlob=await new Promise(resolve=>canvas.toBlob(resolve,'image/png'));
   if(!posterBlob)throw new Error('PNG encoding failed');
   if(posterUrl)URL.revokeObjectURL(posterUrl);posterUrl=URL.createObjectURL(posterBlob);
@@ -249,12 +227,13 @@ async function sharePoster(){
     document.querySelector('#poster-status').textContent='此设备不支持分享菜单，请保存 PNG 后手动分享。';
   }catch(error){if(error.name!=='AbortError')document.querySelector('#poster-status').textContent='分享未能完成；你仍可以保存 PNG 后手动分享。'}
 }
+function scrollPageTop(){const root=document.documentElement,previous=root.style.scrollBehavior;root.style.scrollBehavior='auto';window.scrollTo(0,0);requestAnimationFrame(()=>{root.style.scrollBehavior=previous})}
 function reset(){
   quarterfinalists=[];rankedTracks=[];rankStep=2;posterBlob=null;if(posterUrl){URL.revokeObjectURL(posterUrl);posterUrl=''}
   document.querySelector('#ranking-stage').classList.add('hidden');document.querySelector('#poster-stage').classList.add('hidden');
   const rankedList=document.querySelector('#ranked-list');rankedList.replaceChildren();rankedList.classList.add('hidden');
   pool=buildBracket(sampleTracks());next=[];match=0;groupChoices=[];history=[];
-  document.querySelector('#matchup').classList.remove('hidden');document.querySelector('.cup-bottom').classList.remove('hidden');document.querySelector('.section-head').classList.remove('hidden');render();
+  document.querySelector('#matchup').classList.remove('hidden');document.querySelector('.cup-bottom').classList.remove('hidden');document.querySelector('.section-head').classList.remove('hidden');render();scrollPageTop();
 }
 async function initialize(){
   setStatus('正在载入 Chatmonchy 曲库…');
@@ -312,6 +291,6 @@ document.querySelectorAll('audio').forEach(player=>{
   player.addEventListener('play',()=>document.querySelectorAll('audio').forEach(other=>{if(other!==player)other.pause()}));
   player.addEventListener('timeupdate',()=>{if(player.currentTime>=30){player.pause();player.currentTime=0}});
 });
-undo.addEventListener('click',()=>{const state=history.pop();if(state){pool=state.pool;next=state.next;match=state.match;groupChoices=state.groupChoices||[];render()}});
+undo.addEventListener('click',()=>{const state=history.pop();if(state){pool=state.pool;next=state.next;match=state.match;groupChoices=state.groupChoices||[];render()}scrollPageTop()});
 document.querySelector('#restart').addEventListener('click',reset);document.querySelector('#restart-poster').addEventListener('click',reset);document.querySelector('#share-poster').addEventListener('click',sharePoster);
 initialize();

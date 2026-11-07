@@ -30,10 +30,11 @@
       <div class="hero-copy">
         <div class="eyebrow"><span class="red-dot"></span> THE CHATMONCHY SONG TOURNAMENT</div>
         <h1>SONG<br><span>CUP</span><sup>!</sup></h1>
-        <p class="intro">如果只能留下其中一首，<br>你会选哪一首？</p>
+        <p class="intro">从随机抽出的 32 首 CHATMONCHY 歌曲中，选出你心目中的最佳</p>
         <div class="hero-foot"><span>32 SONGS · 1 WINNER</span><span>あなたの一曲を選んで。</span></div>
       </div>
-        <div class="side-note">CHOOSE YOUR<br>FAVORITE TRACK →</div>
+      <div class="side-note">CHOOSE YOUR<br>FAVORITE TRACK →</div>
+      <button class="start-cup-prompt" id="start-cup" type="button">↓ 下拉开始</button>
     </section>
 
     <section class="cup-section">
@@ -100,7 +101,7 @@
           <p>保存 PNG 图片，或使用设备的分享菜单发送给朋友。</p>
         </div>
         <img id="poster-image" alt="Chatmonchy Song Cup 五首歌曲排名海报" />
-        <!-- <p id="poster-status" class="poster-status" role="status"></p> -->
+        <p id="poster-status" class="poster-status" role="status" aria-live="polite"></p>
         <div class="poster-actions"><button class="outline-button" id="share-poster" type="button">分享海报 ↗</button><a
             class="outline-button download-button" id="download-poster" download="chatmonchy-song-cup-top-five.png">保存
             PNG ↓</a><button class="text-button" id="restart-poster" type="button">再玩一次 ↻</button></div>
@@ -120,6 +121,7 @@
   <footer><span>UNOFFICIAL FAN PROJECT · MADE WITH ♡</span><span>CHATMONCHY IS FOREVER.</span><span>© 2026 SONG
       CUP</span></footer>
   <script src="chatmonchy-catalog.js"></script>
+  <script src="chatmonchy-poster-photo.js"></script>
   <script src="app.js"></script>
 </body>
 

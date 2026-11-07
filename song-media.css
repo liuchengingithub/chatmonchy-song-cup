@@ -785,13 +785,157 @@
         border-right-width: 4px
     }
 }
-/* Keep navigation visible and fold the hero with scroll direction. */
-.topbar{position:sticky;top:0;z-index:20;background:var(--paper)}
-#cup{overflow:hidden;max-height:1000px;transition:max-height .32s ease,min-height .32s ease,padding .32s ease,border-width .32s ease}
-#cup:before,#cup:after{transition:opacity .22s ease}
-body.cup-collapsed #cup{max-height:0;min-height:0;padding-top:0;padding-bottom:0;border-bottom-width:0}
-body.cup-collapsed #cup:before,body.cup-collapsed #cup:after{opacity:0}
-body.cup-collapsed #cup>*{opacity:0;transform:translateY(-10px);pointer-events:none;transition:opacity .16s ease,transform .22s ease}
-@media(prefers-reduced-motion:reduce){#cup, #cup:before, #cup:after, #cup>*{transition:none!important}}
 
-body.cup-transitioning{overflow-anchor:none}
+/* Full-screen opening screen; begin the bracket on the first downward scroll. */
+.topbar{position:sticky;top:0;z-index:20;background:var(--paper)}
+#cup{height:calc(100vh - 78px);height:calc(100svh - 78px);min-height:calc(100svh - 78px);padding:24px 11% 64px;display:grid;place-items:center;position:relative;overflow:hidden}
+#cup .hero-copy{width:100%;max-width:660px;margin:auto}
+#cup .side-note{position:absolute;right:22px;top:45%}
+.start-cup-prompt{position:absolute;left:50%;bottom:18px;transform:translateX(-50%);border:0;background:transparent;color:var(--ink);padding:10px 16px;font:11px 'DM Mono','Noto Sans JP',sans-serif;letter-spacing:.12em;cursor:pointer;animation:prompt-bob 1.5s ease-in-out infinite}
+.start-cup-prompt:focus-visible{outline:2px solid var(--blue);outline-offset:3px}
+@keyframes prompt-bob{0%,100%{translate:0 0}50%{translate:0 5px}}
+body.song-cup-started #cup{display:none}
+@media(max-width:700px){
+  #cup{height:calc(100vh - 66px);height:calc(100svh - 66px);min-height:calc(100svh - 66px);padding:24px 8% 62px}
+  #cup .hero-copy{max-width:100%}
+  #cup .side-note{display:none}
+  .start-cup-prompt{bottom:14px}
+}
+
+/* Cup layouts: compact four-up choices in round one, artwork-led head-to-head rounds. */
+.matchup.first-round-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 18px 14px;
+    align-items: stretch
+}
+.matchup.first-round-grid .song-card {
+    display: grid; grid-template-columns: minmax(0, 1fr); grid-template-rows: auto auto;
+    gap: 10px; min-width: 0; min-height: 0; padding: 10px; border: 1px solid var(--line);
+    background: #f7f4ec; align-content: start
+}
+.matchup.first-round-grid .cover {
+    grid-column: 1; grid-row: 1; width: 100%; aspect-ratio: 1; height: auto
+}
+.matchup.first-round-grid .song-details {
+    grid-column: 1; grid-row: 2; display: flex; flex-direction: column; align-items: flex-start;
+    justify-content: flex-start; min-width: 0; gap: 5px
+}
+.matchup.first-round-grid .album-chip {
+    width: 100%; font-size: clamp(9px, 2.6vw, 12px); line-height: 1.35;
+    white-space: normal; overflow-wrap: anywhere
+}
+.matchup.first-round-grid .song-title {
+    margin: 0; font-size: clamp(15px, 4.1vw, 23px); line-height: 1.25; overflow-wrap: anywhere
+}
+.matchup.first-round-grid .preview {
+    top: auto; right: 15px; bottom: auto; left: auto; inset-block: auto; inset-inline: auto 15px;
+    width: clamp(34px, 10vw, 46px); height: clamp(34px, 10vw, 46px);
+    transform: translateY(calc(-100% - 15px)); background: #f7f4eced; border-color: #77736a
+}
+.matchup.first-round-grid .preview-toggle span { border-top-width: 9px; border-bottom-width: 9px; border-left-width: 14px }
+.matchup.first-round-grid .preview-toggle.playing span {
+    width: 12px; height: 15px; border: 0; border-left: 4px solid currentColor; border-right: 4px solid currentColor
+}
+.matchup.first-round-grid .song-card.chosen { outline: 3px solid var(--red); outline-offset: -4px }
+.first-round-actions {
+    display: grid; grid-template-columns: 1fr; justify-items: stretch; gap: 10px; margin-top: 18px
+}
+.first-round-actions #group-choice-count { justify-self: end; color: var(--muted) }
+.first-round-actions .outline-button { width: 100%; min-height: 48px; margin: 0; font-size: 14px }
+.cup-bottom { flex-wrap: wrap }
+.matchup.first-round-grid ~ .cup-bottom {
+    display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); justify-items: stretch;
+    gap: 10px; padding-top: 14px
+}
+.matchup.first-round-grid ~ .cup-bottom > span { grid-column: 1 / -1; margin: 0 }
+.matchup.first-round-grid ~ .cup-bottom .text-button {
+    min-height: 44px; padding: 10px 12px; border: 1px solid var(--line); font-size: 11px
+}
+.matchup:not(.first-round-grid) .song-card {
+    display: grid; grid-template-columns: minmax(180px, 48%) minmax(0, 1fr); grid-template-rows: 1fr;
+    gap: 12px 22px; min-width: 0; min-height: 270px; padding: 18px 12px;
+    border: 0; background: transparent; align-items: center
+}
+.matchup:not(.first-round-grid) .song-card:before { display: none }
+.matchup:not(.first-round-grid) .cover {
+    grid-column: 1; grid-row: 1; width: 100%; height: auto; aspect-ratio: 1; box-shadow: 5px 5px 0 #29272124
+}
+.matchup:not(.first-round-grid) .song-details {
+    grid-column: 2; grid-row: 1; display: flex; flex-direction: column; align-items: flex-start;
+    min-width: 0; gap: 8px
+}
+.matchup:not(.first-round-grid) .preview {
+    right: auto; left: 18px; inset-inline: 18px auto; bottom: auto; top: auto; inset-block: auto;
+    transform: translateY(calc(-100% - 18px)); width: 50px; height: 50px; background: #f7f4eced
+}
+.matchup:not(.first-round-grid) .song-title { font-size: clamp(22px, 3.2vw, 38px) }
+.matchup:not(.first-round-grid) .album-chip { white-space: normal; line-height: 1.4 }
+.matchup:not(.first-round-grid) ~ .cup-bottom { justify-content: center; gap: 12px; padding-top: 22px }
+.matchup:not(.first-round-grid) ~ .cup-bottom .text-button {
+    min-width: 150px; min-height: 46px; padding: 12px 18px; border: 1px solid var(--line);
+    font-size: 11px; text-align: center
+}
+@media (max-width: 700px) {
+    .matchup.first-round-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px 10px }
+    .matchup.first-round-grid .song-card { padding: 7px; gap: 7px }
+    .matchup.first-round-grid .preview { right: 11px; inset-inline-end: 11px; transform: translateY(calc(-100% - 11px)) }
+    .first-round-actions { gap: 8px }
+    .first-round-actions .outline-button { min-height: 46px; font-size: 13px }
+    .matchup.first-round-grid ~ .cup-bottom { gap: 8px }
+    .matchup.first-round-grid ~ .cup-bottom .text-button { min-height: 48px; padding: 9px 6px; font-size: 10px }
+    .matchup:not(.first-round-grid) { grid-template-columns: minmax(0, 1fr); gap: 7px }
+    .matchup:not(.first-round-grid) .song-card {
+        grid-template-columns: minmax(0, 1fr); grid-template-rows: auto auto; gap: 9px;
+        min-height: 0; padding: 8px 0 12px; justify-items: center
+    }
+    .matchup:not(.first-round-grid) .cover { grid-column: 1; grid-row: 1; width: min(68vw, 290px) }
+    .matchup:not(.first-round-grid) .song-details {
+        grid-column: 1; grid-row: 2; width: 100%; align-items: center; text-align: center; gap: 4px
+    }
+    .matchup:not(.first-round-grid) .album-chip { font-size: 11px }
+    .matchup:not(.first-round-grid) .song-title { font-size: clamp(21px, 6vw, 28px) }
+    .matchup:not(.first-round-grid) .preview {
+        left: auto; right: max(calc((100% - min(68vw, 290px)) / 2 + 10px), 10px);
+        inset-inline: auto max(calc((100% - min(68vw, 290px)) / 2 + 10px), 10px);
+        width: 46px; height: 46px; transform: translateY(calc(-100% - 11px))
+    }
+    .matchup:not(.first-round-grid) .versus { height: 38px; grid-column: 1; grid-row: auto }
+    .matchup:not(.first-round-grid) ~ .cup-bottom {
+        display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); justify-items: stretch;
+        gap: 8px; padding-top: 16px
+    }
+    .matchup:not(.first-round-grid) ~ .cup-bottom > span { grid-column: 1 / -1; margin: 0 }
+    .matchup:not(.first-round-grid) ~ .cup-bottom .text-button {
+        min-width: 0; min-height: 48px; padding: 9px 5px; font-size: 10px
+    }
+}
+
+@media (min-width: 701px) {
+    .matchup.first-round-grid .song-card { container-type: inline-size }
+    .matchup.first-round-grid .preview { top: calc(10px + 100cqw - 60px); bottom: auto; transform: none }
+    .matchup:not(.first-round-grid) .song-card { container-type: inline-size }
+    .matchup:not(.first-round-grid) .preview { top: calc(18px + 48cqw - 68px); bottom: auto; transform: none }
+}
+@media (max-width: 700px) {
+    .matchup.first-round-grid .song-card { container-type: inline-size }
+    .matchup.first-round-grid .preview { top: calc(7px + 100cqw - 48px); bottom: auto; transform: none }
+    .matchup:not(.first-round-grid) .preview { top: calc(8px + min(68vw, 290px) - 57px); bottom: auto; transform: none }
+}
+
+/* Keep all four first-round cards in a true two-column grid on small screens. */
+.matchup.first-round-grid .song-card:before { display: none }
+@media (max-width: 700px) {
+    .matchup.first-round-grid #song-a { grid-column: 1; grid-row: 1 }
+    .matchup.first-round-grid #song-b { grid-column: 2; grid-row: 1 }
+    .matchup.first-round-grid #song-c { grid-column: 1; grid-row: 2 }
+    .matchup.first-round-grid #song-d { grid-column: 2; grid-row: 2 }
+}
+
+/* Final interaction refinements requested for the cup layouts. */
+.matchup.first-round-grid .song-card { border: 0 }
+.matchup:not(.first-round-grid) .versus span { display: none }
+.cup-bottom > span { order: 3; width: 100%; margin: 0; text-align: center }
+.cup-bottom #undo { order: 1 }
+.cup-bottom #restart { order: 2 }
+.matchup.first-round-grid ~ .cup-bottom > span,
+.matchup:not(.first-round-grid) ~ .cup-bottom > span { grid-column: 1 / -1 }
